@@ -24,9 +24,13 @@ jobs:
         run: brew install coreutils
 
       - name: Install the extension
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh extension install thombashi/gh-update
 
       - name: Run update
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           INSTALL_VERSION=v2.14.7
 
