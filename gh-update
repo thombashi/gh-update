@@ -1,0 +1,91 @@
+#!/bin/sh
+
+set -eu
+
+check_tag_name() {
+    if echo "$1" | \grep -qE "^v([0-9]+\.){2}[0-9]+$"; then
+        return 0
+    fi
+
+    echo "unexpected tag name found: $1" 1>&2
+    return 2
+}
+
+extract_os() {
+    OS=$(uname | tr '[:upper:]' '[:lower:]')
+    if [ "$OS" = "darwin" ]; then
+        OS="macOS"
+    fi
+
+    echo "$OS"
+}
+
+extract_machine() {
+    MACHINE=$(uname -m)
+    if [ "$MACHINE" = "x86_64" ]; then
+        MACHINE="amd64"
+    fi
+
+    echo "$MACHINE"
+}
+
+if [ $(id -u) != 0 ]; then
+    echo "please run as root" 1>&2
+    exit 1
+fi
+
+REPO="cli/cli"
+LATEST_TAG=$(gh api repos/${REPO}/releases/latest --jq .tag_name)
+
+check_tag_name ${LATEST_TAG}
+
+LATEST_GH_VERSION=$(echo ${LATEST_TAG} | sed 's/^v//')
+
+OS=$(extract_os)
+MACHINE=$(extract_machine)
+
+if command -v gh >/dev/null 2>&1; then
+    if gh version | \grep -Fw "${LATEST_GH_VERSION}" >/dev/null 2>&1; then
+        echo "already installed the latest gh (${LATEST_GH_VERSION})."
+        exit 0
+    fi
+
+    INSTALL_DIR_PATH=$(dirname $(which gh))
+else
+    INSTALL_DIR_PATH="/usr/local/bin"
+fi
+
+if ! command -v sha256sum >/dev/null 2>&1; then
+    echo "sha256sum not found on the system. you may need to install coreutils package." 1>&2
+    exit 1
+fi
+
+GH_BIN_FILE_PATH="gh_${LATEST_GH_VERSION}_${OS}_${MACHINE}/bin/gh"
+TARBALL_FILENAME="gh_${LATEST_GH_VERSION}_${OS}_${MACHINE}.tar.gz"
+CHECKSUMS_FILENAME="gh_${LATEST_GH_VERSION}_checksums.txt"
+CACHE_DIR_PATH="/var/cache/gh-update"
+CACHE_FILE_PATH="${CACHE_DIR_PATH}/${TARBALL_FILENAME}"
+
+TMP_DIR=$(mktemp -d)
+cd "${TMP_DIR}"
+trap 'rm -rf ${TMP_DIR}' 0 1 2 3 15
+
+if [ -f "${CACHE_FILE_PATH}" ]; then
+    echo "found local cache: ${TARBALL_FILENAME}"
+    cp -a "${CACHE_FILE_PATH}" .
+else
+    # cache file not found: fetch the tarball file from the upstream
+    gh release --repo "${REPO}" download "${LATEST_TAG}" --pattern "${TARBALL_FILENAME}"
+fi
+
+echo "installing gh ${LATEST_GH_VERSION} ..."
+gh release --repo "${REPO}" download "${LATEST_TAG}" --pattern "${CHECKSUMS_FILENAME}"
+\grep "$TARBALL_FILENAME" "${CHECKSUMS_FILENAME}" | sha256sum -c -
+
+tar xzf "$TARBALL_FILENAME" "$GH_BIN_FILE_PATH"
+$GH_BIN_FILE_PATH version
+mv "$GH_BIN_FILE_PATH" "${INSTALL_DIR_PATH}/gh"
+
+# store cache
+mkdir -p "${CACHE_DIR_PATH}"
+cp -a "${TARBALL_FILENAME}" "${CACHE_FILE_PATH}"
