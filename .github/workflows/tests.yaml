@@ -1,0 +1,41 @@
+name: Tests
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.job }}-${{ matrix.os }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup for macOS
+        if: matrix.os == 'macos-latest'
+        run: brew install coreutils
+
+      - name: Install the extension
+        run: gh extension install thombashi/gh-update
+
+      - name: Run update
+        run: |
+          INSTALL_VERSION=v2.14.7
+
+          curl -sS https://raw.githubusercontent.com/thombashi/gh-installer/main/setup-gh.sh | sudo sh -s "$INSTALL_VERSION"
+          gh version | grep -w "$INSTALL_VERSION"
+
+          sudo -E gh update
+          if grep -qw "$INSTALL_VERSION"; then
+            echo "unexpected gh version found" 1>&2
+            gh version
+            exit 1
+          fi
