@@ -12,6 +12,7 @@
 gh extension install thombashi/gh-update
 ```
 
+
 ## Usage
 ```
 sudo -E gh update
@@ -25,4 +26,4 @@ sudo -E gh update
 
 ## Related project
 - [thombashi/gh-installer](https://github.com/thombashi/gh-installer)
-  - Simple one-liner installer of gh (cli/cli) from the release assets without using package management tools.
+  - Simple one-liner installer of gh (cli/cli) from the release assets without package management tools.
