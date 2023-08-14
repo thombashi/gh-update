@@ -22,8 +22,3 @@ sudo -E gh update
 ## Supported environments
 - Linux
 - macOS
-
-
-## Related project
-- [thombashi/gh-installer](https://github.com/thombashi/gh-installer)
-  - Simple one-liner installer of gh (cli/cli) from the release assets without package management tools.
