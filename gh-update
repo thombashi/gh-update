@@ -41,7 +41,7 @@ MACHINE=$(extract_machine)
 
 if command -v gh >/dev/null 2>&1; then
     if gh version | \grep -Fw "${LATEST_GH_VERSION}" >/dev/null 2>&1; then
-        echo "already installed the latest gh (${LATEST_GH_VERSION})."
+        echo -e "\x1b[32m✓\x1b[0m Already installed the latest gh (${LATEST_GH_VERSION})."
         exit 0
     fi
 
@@ -50,13 +50,15 @@ else
     INSTALL_DIR_PATH="/usr/local/bin"
 fi
 
+echo "found a new gh version (${LATEST_GH_VERSION})"
+
 if ! command -v sha256sum >/dev/null 2>&1; then
     echo "sha256sum not found on the system. you may need to install coreutils package." 1>&2
     exit 1
 fi
 
 if [ $(id -u) != 0 ]; then
-    echo "please run as root" 1>&2
+    echo "please run as root to update gh" 1>&2
     exit 1
 fi
 
